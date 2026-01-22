@@ -204,7 +204,7 @@ export function AIAssistantInterface() {
             transition={{ duration: 0.3 }}
             className="flex flex-col items-center"
           >
-            <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-400 mb-2">
+            <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-linear-to-r from-blue-600 to-blue-400 mb-2">
               Ready to assist you
             </h1>
             <p className="text-gray-500 max-w-md">

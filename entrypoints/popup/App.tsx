@@ -13,6 +13,22 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
 
+  const sendToActiveTab = async (message: unknown) => {
+    const chromeApi = (window as any)?.chrome;
+    if (!chromeApi?.tabs?.query || !chromeApi?.tabs?.sendMessage) return;
+    const [tab] = await chromeApi.tabs.query({ active: true, currentWindow: true });
+    if (tab?.id) {
+      try {
+        await chromeApi.tabs.sendMessage(tab.id, message);
+      } catch (error) {
+        console.error('Failed to send message to tab', error);
+      }
+    }
+  };
+
+  const openChatbotInPage = () => sendToActiveTab({ type: 'ai-assistant:open' });
+  const closeChatbotInPage = () => sendToActiveTab({ type: 'ai-assistant:close' });
+
   useEffect(() => {
     const savedKey = localStorage.getItem('whatsapp_api_key');
     const savedName = localStorage.getItem('whatsapp_username');
@@ -170,6 +186,20 @@ function App() {
 
       {/* Main Content */}
       <main className="flex items-center justify-center px-4 py-6 w-full">
+        <div className="mt-6 flex gap-3 flex-wrap">
+                    <button
+                      onClick={openChatbotInPage}
+                      className="px-4 py-2 text-white font-semibold text-sm rounded-lg bg-linear-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                    >
+                      Open Chatbot in Page
+                    </button>
+                    <button
+                      onClick={closeChatbotInPage}
+                      className="px-4 py-2 text-white font-semibold text-sm rounded-lg bg-gray-600 hover:bg-gray-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                    >
+                      Close Chatbot
+                    </button>
+                  </div>
         <div className="w-full max-w-6xl">
           {currentView === 'not-whatsapp-opened' ? (
             <div className="space-y-6 py-8">
@@ -237,6 +267,7 @@ function App() {
                       <p className="text-xs text-gray-600">Convert text messages into natural-sounding audio.</p>
                     </div>
                   </div>
+                  
                 </>
               ) : (
                 <>

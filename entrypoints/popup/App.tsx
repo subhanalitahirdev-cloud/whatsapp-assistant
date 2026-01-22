@@ -11,6 +11,7 @@ function App() {
   const [storedApiKey, setStoredApiKey] = useState('');
   const [editingApiKey, setEditingApiKey] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
 
   useEffect(() => {
     const savedKey = localStorage.getItem('whatsapp_api_key');
@@ -28,7 +29,9 @@ function App() {
         const activeTab = tabs[0];
         const url = activeTab?.url || '';
 
-        if (!url.includes('web.whatsapp.com')) {
+        const onWhatsApp = url.includes('web.whatsapp.com');
+        setIsWhatsAppOpen(onWhatsApp);
+        if (!onWhatsApp) {
           setCurrentView('not-whatsapp-opened');
           return;
         }
@@ -70,6 +73,19 @@ function App() {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Guard views: only allow home/settings when WhatsApp Web is open and user logged in
+  useEffect(() => {
+    if (!isWhatsAppOpen) {
+      setCurrentView('not-whatsapp-opened');
+      setMenuOpen(false);
+      return;
+    }
+    if (!isLoggedIn) {
+      setCurrentView('not-logged-in');
+      setMenuOpen(false);
+    }
+  }, [isWhatsAppOpen, isLoggedIn]);
 
   const handleSubmit = () => {
     if (apiKey.trim()) {
@@ -115,8 +131,12 @@ function App() {
 
         {/* Menu Button */}
         <button
-          onClick={() => setMenuOpen(!menuOpen)}
-          className="group relative inline-flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-200 hover:bg-gray-100"
+          onClick={() => {
+            if (!isWhatsAppOpen || !isLoggedIn) return;
+            setMenuOpen(!menuOpen);
+          }}
+          className="group relative inline-flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-200 hover:bg-gray-100 disabled:opacity-50"
+          disabled={!isWhatsAppOpen || !isLoggedIn}
         >
           <div className="flex flex-col gap-1.5">
             <span className={`h-0.5 w-6 bg-gray-700 transition-all duration-300 ${menuOpen ? 'translate-y-2 rotate-45' : ''}`} />

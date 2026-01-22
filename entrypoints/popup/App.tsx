@@ -15,30 +15,51 @@ function App() {
   useEffect(() => {
     const savedKey = localStorage.getItem('whatsapp_api_key');
     const savedName = localStorage.getItem('whatsapp_username');
-    const currentOrigin = window.location.origin;
-    
-    if (!currentOrigin.includes('web.whatsapp.com')) {
-      setCurrentView('not-whatsapp-opened');
-      return;
-    }
-    
-    // Check if user is logged in to WhatsApp
-    const checkLoginStatus = () => {
-      const sidePanel = document.querySelector('[role="main"]');
-      const chatList = document.querySelector('[data-testid="chat-list"]') || document.querySelector('[data-tab="1"]');
-      const isLogged = !!sidePanel || !!chatList;
-      setIsLoggedIn(isLogged);
-      if (!isLogged) {
-        setCurrentView('not-logged-in');
-      } else {
-        setCurrentView('home');
+
+    const chromeApi = (window as any)?.chrome;
+
+    const setWhatsAppView = async () => {
+      if (!chromeApi?.tabs?.query || !chromeApi?.scripting?.executeScript) {
+        setCurrentView('not-whatsapp-opened');
+        return;
+      }
+      try {
+        const tabs = await chromeApi.tabs.query({ active: true, currentWindow: true });
+        const activeTab = tabs[0];
+        const url = activeTab?.url || '';
+
+        if (!url.includes('web.whatsapp.com')) {
+          setCurrentView('not-whatsapp-opened');
+          return;
+        }
+
+        // Check if user is logged in to WhatsApp by probing DOM in the active tab
+        chromeApi.scripting.executeScript(
+          {
+            target: { tabId: activeTab.id as number },
+            func: () => {
+              const sidePanel = document.querySelector('[role="main"]');
+              const chatList = document.querySelector('[data-testid="chat-list"]') || document.querySelector('[data-tab="1"]');
+              return !!(sidePanel || chatList);
+            }
+          },
+          (results: any[]) => {
+            const [{ result: isLogged }] = results || [{ result: false }];
+            setIsLoggedIn(!!isLogged);
+            setCurrentView(isLogged ? 'home' : 'not-logged-in');
+          }
+        );
+      } catch (error) {
+        console.error('Error checking WhatsApp tab:', error);
+        setCurrentView('not-whatsapp-opened');
       }
     };
-    
-    checkLoginStatus();
-    // Recheck login status every 2 seconds
-    const loginCheckInterval = setInterval(checkLoginStatus, 2000);
-    
+
+    // Initial run
+    setWhatsAppView();
+    // Re-check every 2 seconds
+    const interval = setInterval(setWhatsAppView, 2000);
+
     if (savedKey) {
       setStoredApiKey(savedKey);
       setEditingApiKey(savedKey);
@@ -46,8 +67,8 @@ function App() {
     if (savedName) {
       setUsername(savedName);
     }
-    
-    return () => clearInterval(loginCheckInterval);
+
+    return () => clearInterval(interval);
   }, []);
 
   const handleSubmit = () => {
